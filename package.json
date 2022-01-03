@@ -8,6 +8,7 @@
     "type-check": "tsc"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^1.29.1",
     "electron": "^13.2.2",
     "next": "^11.1.0",
     "react": "^17.0.2",
