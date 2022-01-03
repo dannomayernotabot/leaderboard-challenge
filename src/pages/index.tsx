@@ -47,6 +47,7 @@ const IndexPage = () => {
       }
 
       const accs = await web3.eth.getAccounts();
+      console.log(accs)
 
       const newAccounts = await Promise.all(
         accs.map(async (address: string) => {
@@ -101,6 +102,7 @@ const IndexPage = () => {
   };
 
   const loginToMetaMask = async () => {
+    console.log('logging in')    
     await (window as any).ethereum.request({ method: "eth_requestAccounts" });
     loadBlockchainData();
     setWeb3Enabled(true);

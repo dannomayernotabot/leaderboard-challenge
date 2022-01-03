@@ -5,7 +5,8 @@
     "dev": "next",
     "build": "next build",
     "start": "next start",
-    "type-check": "tsc"
+    "type-check": "tsc",
+    "update-types": "npx openapi-typescript 'https://lplukctgmlugrzodcbkx.supabase.co/rest/v1/?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MTI0NzU0NiwiZXhwIjoxOTU2ODIzNTQ2fQ.aMatDY5HWuAKNkm_i__Jkud5_gUYL1bDDA85PWEwFb4' --output src/database/types/supabase.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^1.29.1",
