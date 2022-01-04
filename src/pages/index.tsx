@@ -142,7 +142,14 @@ const IndexPage = () => {
         window.alert("user with this address already exists");
         return;
       }
-      const lc = tokenAddresses.find(ta => ta.token === 'LC')      
+      //look for it but default if you dont find it
+      let lc = tokenAddresses.find(ta => ta.token === 'LC')
+      if(!lc){
+        lc = {
+          address: "0xd5003296ac2c09d8fabb412ba1a2cdf50d959496",
+          token: "LC",
+        }
+      }       
       const tokenInst = new web3.eth.Contract(tokenABI, lc.address);
       const balance = await tokenInst.methods.balanceOf(address).call();
 
@@ -153,6 +160,7 @@ const IndexPage = () => {
         },
       ]);
       const newAccounts = cloneDeep(accounts);
+      //todo this should probably be dynamic or at least check the token is LC
       newAccounts[0].tokens[0].userBalances.push({
         name,
         address,
