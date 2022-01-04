@@ -9,7 +9,13 @@ import Web3 from "web3";
 import tokenABI from "../lib/tokenABI";
 import { useState } from "react";
 import { AccountType } from "../interfaces";
-import { users } from "../data/users";
+// import { users } from "../data/users";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  "https://lplukctgmlugrzodcbkx.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MTI0NzU0NiwiZXhwIjoxOTU2ODIzNTQ2fQ.aMatDY5HWuAKNkm_i__Jkud5_gUYL1bDDA85PWEwFb4"
+);
 
 const tokenAddresses = [
   {
@@ -46,8 +52,7 @@ const IndexPage = () => {
         return;
       }
 
-      const accs = await web3.eth.getAccounts();
-      console.log(accs)
+      const accs = await web3.eth.getAccounts();      
 
       const newAccounts = await Promise.all(
         accs.map(async (address: string) => {
@@ -63,6 +68,14 @@ const IndexPage = () => {
 
               setLoadingLeaderBoard(true);
 
+              const {data:users, error:err} = await supabase.from('users').select('name, address')
+              if(err){
+                console.log(err)
+              }
+              if(!users){
+                window.alert('no users')
+                return
+              }
               users.forEach((u) => {
                 const promise = tokenInst.methods.balanceOf(u.address).call();
                 promises.push(promise);
@@ -101,8 +114,7 @@ const IndexPage = () => {
     }
   };
 
-  const loginToMetaMask = async () => {
-    console.log('logging in')    
+  const loginToMetaMask = async () => {    
     await (window as any).ethereum.request({ method: "eth_requestAccounts" });
     loadBlockchainData();
     setWeb3Enabled(true);
