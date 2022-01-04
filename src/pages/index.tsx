@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import dynamic from "next/dynamic";
 import ClipLoader from "react-spinners/ClipLoader";
+import { cloneDeep } from "lodash";
 
 const Account = dynamic(() => import("../components/Leaderboard"));
 
@@ -71,14 +72,17 @@ const IndexPage = () => {
 
       const newAccounts = await Promise.all(
         accs.map(async (address: string) => {
-          const balance = await web3.eth.getBalance(address);
-
+          const balance = await web3.eth.getBalance(address);          
+          console.log(balance)
+          console.log(address)
           const tokenBalances = await Promise.all(
             tokenAddresses.map(async (token) => {
+              console.log(token.address)
               const tokenInst = new web3.eth.Contract(tokenABI, token.address);
 
               const balance = await tokenInst.methods.balanceOf(address).call();
-
+              console.log(balance)
+              console.log(address)
               const promises: any[] = [];
 
               setLoadingLeaderBoard(true);
@@ -89,6 +93,7 @@ const IndexPage = () => {
               });
 
               const balances = await Promise.all(promises);
+              console.log(balances)
               const mappedBalance = balances.map((b, i) => {
                 return {
                   name: users[i].name,
@@ -131,23 +136,29 @@ const IndexPage = () => {
     setAddPeer(false);
     const address = event.target.elements.Address.value;
     const name = event.target.elements.Name.value;
+    //the db enforces unique address as well, but better performance to check here
     if (web3.utils.isAddress(address)) {
-      const tokenInst = new web3.eth.Contract(tokenABI, address);
-      try {
-        const balance = await tokenInst.methods.balanceOf(address).call();
-
-        await supabase.from("users").insert([
-          {
-            name: name,
-            address: address,
-          },
-        ]);
-        users.push({ name, address, balance });
-        setUsers(users);
-      } catch (e) {
-        console.log(e);
-        window.alert('failed to add user')
+      if (users.find((user) => user.address == address)) {
+        window.alert("user with this address already exists");
+        return;
       }
+      const lc = tokenAddresses.find(ta => ta.token === 'LC')      
+      const tokenInst = new web3.eth.Contract(tokenABI, lc.address);
+      const balance = await tokenInst.methods.balanceOf(address).call();
+
+      await supabase.from("users").insert([
+        {
+          name: name,
+          address: address,
+        },
+      ]);
+      const newAccounts = cloneDeep(accounts);
+      newAccounts[0].tokens[0].userBalances.push({
+        name,
+        address,
+        balance: Number(web3.utils.fromWei(balance, "ether")),
+      });
+      setAccounts(newAccounts);
     } else {
       window.alert("invalid address");
     }
