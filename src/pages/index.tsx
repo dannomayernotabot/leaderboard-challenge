@@ -2,20 +2,15 @@ import React, { useEffect } from "react";
 import dynamic from "next/dynamic";
 import ClipLoader from "react-spinners/ClipLoader";
 
-const Leaderboard = dynamic(() => import("../components/Leaderboard"));
+const Account = dynamic(() => import("../components/Leaderboard"));
 
 import Layout from "../components/Layout";
 import Web3 from "web3";
 import tokenABI from "../lib/tokenABI";
 import { useState } from "react";
-import { AccountType } from "../interfaces";
-// import { users } from "../data/users";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  "https://lplukctgmlugrzodcbkx.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MTI0NzU0NiwiZXhwIjoxOTU2ODIzNTQ2fQ.aMatDY5HWuAKNkm_i__Jkud5_gUYL1bDDA85PWEwFb4"
-);
+import { AccountType, UserBalance } from "../interfaces";
+import supabase from "../database";
+import Form from "../components/Form";
 
 const tokenAddresses = [
   {
@@ -26,25 +21,45 @@ const tokenAddresses = [
 
 const ALLOWED_NETWORK = "rinkeby";
 
+let web3: Web3 = new Web3();
+
 const IndexPage = () => {
   const [accounts, setAccounts] = useState<AccountType[]>([]);
   const [web3Enabled, setWeb3Enabled] = useState(false);
   const [isLoadingLeaderboard, setLoadingLeaderBoard] = useState(false);
+  const [isAddPeer, setAddPeer] = useState(false);
+  const [users, setUsers] = useState<UserBalance[]>([]);
 
   useEffect(() => {
     if ((window as any).ethereum) {
       setWeb3Enabled(true);
+      web3 = new Web3((window as any).ethereum);
     } else {
       window.alert("Please install Metamask");
     }
   }, []);
 
-  const loadBlockchainData = async () => {
-    // Empty web3 instance
-    let web3: Web3 = new Web3();
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data: users, error } = await supabase
+        .from("users")
+        .select("name, address");
 
+      if (error) {
+        //probably want to use whatever logging service is in place rather than console irl
+        console.log(error);
+        return;
+      }
+
+      if (users) {
+        setUsers(users);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const loadBlockchainData = async () => {
     if (web3Enabled) {
-      web3 = new Web3((window as any).ethereum);
       const netId = await web3.eth.net.getNetworkType();
 
       if (netId !== ALLOWED_NETWORK) {
@@ -52,7 +67,7 @@ const IndexPage = () => {
         return;
       }
 
-      const accs = await web3.eth.getAccounts();      
+      const accs = await web3.eth.getAccounts();
 
       const newAccounts = await Promise.all(
         accs.map(async (address: string) => {
@@ -68,14 +83,6 @@ const IndexPage = () => {
 
               setLoadingLeaderBoard(true);
 
-              const {data:users, error:err} = await supabase.from('users').select('name, address')
-              if(err){
-                console.log(err)
-              }
-              if(!users){
-                window.alert('no users')
-                return
-              }
               users.forEach((u) => {
                 const promise = tokenInst.methods.balanceOf(u.address).call();
                 promises.push(promise);
@@ -114,10 +121,36 @@ const IndexPage = () => {
     }
   };
 
-  const loginToMetaMask = async () => {    
+  const loginToMetaMask = async () => {
     await (window as any).ethereum.request({ method: "eth_requestAccounts" });
     loadBlockchainData();
     setWeb3Enabled(true);
+  };
+
+  const addPeer = async (event: any) => {
+    setAddPeer(false);
+    const address = event.target.elements.Address.value;
+    const name = event.target.elements.Name.value;
+    if (web3.utils.isAddress(address)) {
+      const tokenInst = new web3.eth.Contract(tokenABI, address);
+      try {
+        const balance = await tokenInst.methods.balanceOf(address).call();
+
+        await supabase.from("users").insert([
+          {
+            name: name,
+            address: address,
+          },
+        ]);
+        users.push({ name, address, balance });
+        setUsers(users);
+      } catch (e) {
+        console.log(e);
+        window.alert('failed to add user')
+      }
+    } else {
+      window.alert("invalid address");
+    }
   };
 
   return (
@@ -151,22 +184,34 @@ const IndexPage = () => {
       </div>
 
       {accounts && accounts.length > 0 && !isLoadingLeaderboard && (
-        <div className="actions">
-          
-          </div>
+        <div className="actions"></div>
       )}
 
-      {accounts && accounts.length > 0 && !isLoadingLeaderboard && (
-        <div className="accounts">
-          {accounts.map((account) => {
-            return (
-              <div className="account" key={account.address}>
-                <Leaderboard account={account} />
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {accounts &&
+        accounts.length > 0 &&
+        users &&
+        users.length > 0 &&
+        !isLoadingLeaderboard &&
+        !isAddPeer && (
+          <div>
+            <div className="actions">
+              <button className="actions" onClick={() => setAddPeer(true)}>
+                Add Peer
+              </button>
+            </div>
+            <div className="accounts">
+              {accounts.map((account) => {
+                return (
+                  <div className="account" key={account.address}>
+                    <Account account={account} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      {isAddPeer && <Form fields={["Name", "Address"]} onSubmit={addPeer} />}
 
       <style jsx global>
         {`
@@ -189,6 +234,15 @@ const IndexPage = () => {
           justify-content: center;
           padding: 15px;
           border-radius: 10px;
+          font-family: "Recoleta Regular DEMO";
+          font-size: 20px;
+        }
+
+        .addPeerForm {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 15px;
           font-family: "Recoleta Regular DEMO";
           font-size: 20px;
         }
@@ -228,7 +282,8 @@ const IndexPage = () => {
           color: red;
         }
 
-        button {
+        button,
+        .submit {
           background: black;
           color: white;
           border: none;
