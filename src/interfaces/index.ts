@@ -15,3 +15,4 @@ export type AccountType = {
   balance: number;
   tokens: Tokens[];
 };
+

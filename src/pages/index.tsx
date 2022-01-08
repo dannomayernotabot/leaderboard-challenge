@@ -2,6 +2,8 @@ import React, { useEffect } from "react";
 import dynamic from "next/dynamic";
 import ClipLoader from "react-spinners/ClipLoader";
 import { cloneDeep } from "lodash";
+import 'bootstrap/dist/css/bootstrap.min.css';
+
 
 const Account = dynamic(() => import("../components/Leaderboard"));
 
@@ -11,7 +13,8 @@ import tokenABI from "../lib/tokenABI";
 import { useState } from "react";
 import { AccountType, UserBalance } from "../interfaces";
 import supabase from "../database";
-import Form from "../components/Form";
+import AddPeerForm from "../components/AddPeerForm";
+import SendTokensForm from "../components/SendTokensForm";
 
 const tokenAddresses = [
   {
@@ -29,6 +32,7 @@ const IndexPage = () => {
   const [web3Enabled, setWeb3Enabled] = useState(false);
   const [isLoadingLeaderboard, setLoadingLeaderBoard] = useState(false);
   const [isAddPeer, setAddPeer] = useState(false);
+  const [isSendTokens, setSendTokens] = useState(false);
   const [users, setUsers] = useState<UserBalance[]>([]);
 
   useEffect(() => {
@@ -72,17 +76,17 @@ const IndexPage = () => {
 
       const newAccounts = await Promise.all(
         accs.map(async (address: string) => {
-          const balance = await web3.eth.getBalance(address);          
-          console.log(balance)
-          console.log(address)
+          const balance = await web3.eth.getBalance(address);
+          console.log(balance);
+          console.log(address);
           const tokenBalances = await Promise.all(
             tokenAddresses.map(async (token) => {
-              console.log(token.address)
+              console.log(token.address);
               const tokenInst = new web3.eth.Contract(tokenABI, token.address);
 
               const balance = await tokenInst.methods.balanceOf(address).call();
-              console.log(balance)
-              console.log(address)
+              console.log(balance);
+              console.log(address);
               const promises: any[] = [];
 
               setLoadingLeaderBoard(true);
@@ -93,7 +97,7 @@ const IndexPage = () => {
               });
 
               const balances = await Promise.all(promises);
-              console.log(balances)
+              console.log(balances);
               const mappedBalance = balances.map((b, i) => {
                 return {
                   name: users[i].name,
@@ -143,13 +147,13 @@ const IndexPage = () => {
         return;
       }
       //look for it but default if you dont find it
-      let lc = tokenAddresses.find(ta => ta.token === 'LC')
-      if(!lc){
+      let lc = tokenAddresses.find((ta) => ta.token === "LC");
+      if (!lc) {
         lc = {
           address: "0xd5003296ac2c09d8fabb412ba1a2cdf50d959496",
           token: "LC",
-        }
-      }       
+        };
+      }
       const tokenInst = new web3.eth.Contract(tokenABI, lc.address);
       const balance = await tokenInst.methods.balanceOf(address).call();
 
@@ -170,7 +174,7 @@ const IndexPage = () => {
     } else {
       window.alert("invalid address");
     }
-  };
+  };  
 
   return (
     <Layout title="🏦 $LC Token 🏦">
@@ -211,11 +215,15 @@ const IndexPage = () => {
         users &&
         users.length > 0 &&
         !isLoadingLeaderboard &&
+        !isSendTokens &&
         !isAddPeer && (
           <div>
             <div className="actions">
               <button className="actions" onClick={() => setAddPeer(true)}>
                 Add Peer
+              </button>
+              <button className="actions" onClick={() => setSendTokens(true)}>
+                Send Funds
               </button>
             </div>
             <div className="accounts">
@@ -230,7 +238,20 @@ const IndexPage = () => {
           </div>
         )}
 
-      {isAddPeer && <Form fields={["Name", "Address"]} onSubmit={addPeer} />}
+      {isAddPeer && (
+        <AddPeerForm fields={["Name", "Address"]} onSubmit={addPeer} />
+      )}
+
+      {/* i know i shouldnt be hard coding this but Lucas said the only reason
+       the data is in this format is because this was a rough draft so im just going
+       to assume that accounts[0].tokens[0].userBalances would be something like
+       simply userBalances in a production environment and not worry too much about
+       the hardcoding. im happy to restructure the data but i dont think that's really
+       the pertinent task at hand       
+       */}
+      {isSendTokens && (
+        <SendTokensForm userBalances={accounts[0].tokens[0].userBalances} setSendTokens={setSendTokens} web3={web3}/>
+      )}
 
       <style jsx global>
         {`
@@ -310,6 +331,7 @@ const IndexPage = () => {
           padding: 15px;
           cursor: pointer;
           font-family: "Recoleta Regular DEMO";
+          margin: 10px;
         }
 
         .account {
