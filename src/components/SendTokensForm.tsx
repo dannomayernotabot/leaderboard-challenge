@@ -1,11 +1,14 @@
 import { Form, Button, Col, Row } from "react-bootstrap";
+import Web3 from "web3";
 
 import tokenABI from "../lib/tokenABI";
 import { UserBalance } from "../interfaces";
 
+
 type PropTypes = {
   userBalances: Array<UserBalance>;
-  setSendTokens: Function
+  setSendTokens: Function,
+  web3: Web3
 };
 
 const SendTokensForm = ({ userBalances, setSendTokens, web3 }: PropTypes) => {
@@ -29,7 +32,7 @@ const SendTokensForm = ({ userBalances, setSendTokens, web3 }: PropTypes) => {
 //     return ret;
 //   };
 
-const onFormSubmit = async (e) =>{
+const onFormSubmit = async (e: any) =>{
     e.preventDefault()    
     setSendTokens(false)
     const accs = await web3.eth.getAccounts();    
